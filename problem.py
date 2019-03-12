@@ -7,6 +7,8 @@ problem is worse than a registered exception so that it only warns when things
 get worse.
 """
 
+import os.path
+
 class ProblemVault(object):
     """
     Singleton where we store the various new problems we
@@ -53,6 +55,10 @@ class ProblemVault(object):
         return False
 
 class Problem(object):
+    """
+    A generic problem in our source code. See the subclasses below for the
+    specific problems we are trying to tackle.
+    """
     def __init__(self, problem_type, problem_location, metric_value):
         self.problem_location = problem_location
         self.metric_value = int(metric_value)
@@ -66,20 +72,44 @@ class Problem(object):
 
     def key(self):
         """Generate a unique key that describes this problem that can be used as a dictionary key"""
-        return "%s:%s" % (self.problem_location, self.problem_type)
+        # Problem location is a filesystem path, so we need to normalize this
+        # across platforms otherwise same paths are not gonna match.
+        canonical_location = os.path.normcase(self.problem_location)
+        return "%s:%s" % (canonical_location, self.problem_type)
 
     def __str__(self):
         return "problem %s %s %s" % (self.problem_type, self.problem_location, self.metric_value)
 
 class FileSizeProblem(Problem):
+    """
+    Denotes a problem with the size of a .c file.
+
+    The 'problem_location' is the filesystem path of the .c file, and the
+    'metric_value' is the number of lines in the .c file.
+    """
     def __init__(self, problem_location, metric_value):
         super(FileSizeProblem, self).__init__("file-size", problem_location, metric_value)
 
 class IncludeCountProblem(Problem):
+    """
+    Denotes a problem with the number of #includes in a .c file.
+
+    The 'problem_location' is the filesystem path of the .c file, and the
+    'metric_value' is the number of #includes in the .c file.
+    """
     def __init__(self, problem_location, metric_value):
         super(IncludeCountProblem, self).__init__("include-count", problem_location, metric_value)
 
 class FunctionSizeProblem(Problem):
+    """
+    Denotes a problem with a size of a function in a .c file.
+
+    The 'problem_location' is "<path>:<function>()" where <path> is the
+    filesystem path of the .c file and <function> is the name of the offending
+    function.
+
+    The 'metric_value' is the size of the offending function in lines.
+    """
     def __init__(self, problem_location, metric_value):
         super(FunctionSizeProblem, self).__init__("function-size", problem_location, metric_value)
 

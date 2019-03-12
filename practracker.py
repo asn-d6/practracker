@@ -9,13 +9,13 @@ exceptions file, then log a problem about them.
 
 We currently do metrics about file size, function size and number of includes.
 
-practracker.py should be run from the top-level directory of the tor source
-code, like this:
-  $ python3 scripts/maint/practracker/practracker.py
+practracker.py should be run with its second argument pointing to the Tor
+top-level source directory like this:
+  $ python3 ./scripts/maint/practracker/practracker.py .
 
 The exceptions file is meant to be initialized once with the current state of
 the source code and then get saved in the repository for ever after:
-  $ python3 scripts/maint/practracker/practracker.py > scripts/maint/practracker/exceptions.txt
+  $ python3 ./scripts/maint/practracker/practracker.py . > ./scripts/maint/practracker/exceptions.txt
 """
 
 import os, sys
@@ -24,10 +24,8 @@ import metrics
 import util
 import problem
 
-# Where the Tor source code is
-TOR_TOPDIR = "src"
-# An optional exceptions_file
-EXCEPTIONS_FILE = "./scripts/maint/practracker/exceptions.txt"
+# The filename of the exceptions file (it should be placed in the practracker directory)
+EXCEPTIONS_FNAME = "./exceptions.txt"
 
 # Recommended file size
 MAX_FILE_SIZE = 3000 # lines
@@ -40,6 +38,9 @@ MAX_INCLUDE_COUNT = 50
 
 # ProblemVault singleton
 ProblemVault = None
+
+# The Tor source code topdir
+TOR_TOPDIR = None
 
 #######################################################
 
@@ -111,16 +112,29 @@ def consider_metrics_for_file(fname, f):
     return found_new_issues
 
 def main():
+    if (len(sys.argv) != 2):
+        print("Usage:\n\t$ practracker.py <tor topdir>\n\t(e.g. $ practracker.py ~/tor/)")
+        return
+
+    global TOR_TOPDIR
+    TOR_TOPDIR = sys.argv[1]
+    exceptions_file = os.path.join(TOR_TOPDIR, "scripts/maint/practracker", EXCEPTIONS_FNAME)
+
     # 1) Get all the .c files we care about
     files_list = util.get_tor_c_files(TOR_TOPDIR)
 
     # 2) Initialize problem vault and load an optional exceptions file so that
     # we don't warn about the past
     global ProblemVault
-    ProblemVault = problem.ProblemVault(EXCEPTIONS_FILE)
+    ProblemVault = problem.ProblemVault(exceptions_file)
 
     # 3) Go through all the files and report problems if they are not exceptions
     found_new_issues = consider_all_metrics(files_list)
+
+    # If new issues were found, try to give out some advice to the developer on how to resolve it.
+    if (found_new_issues):
+        new_issues_str = "practracker FAILED as indicated by the problem lines above. Please use the exceptions file ({}) to find any previous state of these problems. If you are unable to fix the underlying best-practices issue right now then you need to either update the relevant exception line or add a new one.".format(exceptions_file)
+        print(new_issues_str)
 
     sys.exit(found_new_issues)
 

@@ -2,7 +2,7 @@ import os
 
 # We don't want to run metrics for unittests, automatically-generated C files,
 # external libraries or git leftovers.
-EXCLUDE_SOURCE_DIRS = ["/test/", "/trunnel/", "/ext/", "/.git/"]
+EXCLUDE_SOURCE_DIRS = ["/src/test/", "/src/trunnel/", "/src/ext/", "/.git/"]
 
 def get_tor_c_files(tor_topdir):
     """
@@ -18,7 +18,7 @@ def get_tor_c_files(tor_topdir):
 
             # Exclude the excluded paths
             full_path = os.path.join(root,filename)
-            if any(exclude_dir in full_path for exclude_dir in EXCLUDE_SOURCE_DIRS):
+            if any(os.path.normcase(exclude_dir) in full_path for exclude_dir in EXCLUDE_SOURCE_DIRS):
                 continue
 
             files_list.append(full_path)
