@@ -7,7 +7,10 @@ problem is worse than a registered exception so that it only warns when things
 get worse.
 """
 
+from __future__ import print_function
+
 import os.path
+import sys
 
 class ProblemVault(object):
     """
@@ -23,7 +26,7 @@ class ProblemVault(object):
             with open(exception_fname, 'r') as exception_f:
                 self.register_exceptions(exception_f)
         except IOError:
-            print("No exception file provided")
+            print("No exception file provided", file=sys.stderr)
 
     def register_exceptions(self, exception_file):
         # Register exceptions
@@ -31,6 +34,12 @@ class ProblemVault(object):
             problem = get_old_problem_from_exception_str(line)
             if problem is None:
                 continue
+
+            # Fail if we see dup exceptions. There is really no reason to have dup exceptions.
+            if problem.key() in self.exceptions:
+                print("Duplicate exceptions lines found in exception file:\n\t{}\n\t{}\nAborting...".format(problem, self.exceptions[problem.key()]),
+                      file=sys.stderr)
+                sys.exit(1)
 
             self.exceptions[problem.key()] = problem
             #print "Registering exception: %s" % problem
